@@ -29,13 +29,13 @@ export function openPlayer(src, progressKey) {
   if (existing && existing._close) existing._close();
   else existing?.remove();
 
-  // 1. LOCK THE MAIN WINDOW (STOPS REDIRECTS)
-  const preventRedirect = () => "Do you want to leave this site?";
+  // 1. THE REDIRECT JAIL (Doesn't trigger sandbox errors)
+  const preventRedirect = () => "Stay on this page?";
   window.onbeforeunload = preventRedirect;
 
-  // 2. LOCK BROWSER HISTORY (STOPS "BACK BUTTON" HIJACKING)
-  const originalPushState = window.history.pushState;
-  window.history.pushState = function() { return; };
+  // 2. THE POPUP KILLER (Overrides the window.open command)
+  const originalOpen = window.open;
+  window.open = function() { return null; }; 
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
@@ -45,13 +45,10 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
   
-  // 3. HARDENED SANDBOX (BLOCKS TOP-LEVEL NAVIGATION)
-  // The 'allow-popups-to-escape-sandbox' usually fixes the "Sandbox Detected" error.
-  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
-
+  // REMOVED SANDBOX ATTRIBUTE TO BYPASS DETECTION
   iframe.src = src;
 
-  // 4. AD-SHIELD (EATS THE FIRST CLICK)
+  // 3. THE AD-SHIELD (EATS THE FIRST CLICK)
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
@@ -86,9 +83,9 @@ export function openPlayer(src, progressKey) {
     iframe.src = '';
     overlay.remove();
     
-    // RESTORE BROWSER FUNCTIONS ON CLOSE
+    // RESTORE BROWSER FUNCTIONS
     window.onbeforeunload = null;
-    window.history.pushState = originalPushState;
+    window.open = originalOpen; 
     
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('blur', onBlur);
@@ -102,6 +99,7 @@ export function openPlayer(src, progressKey) {
   document.addEventListener('keydown', onKey);
 }
 
+// ... Rest of the file (openMoviePlayer, openEpisodePlayer, openLivePlayer) stays the same
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
