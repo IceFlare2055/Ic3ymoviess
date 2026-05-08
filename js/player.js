@@ -3,6 +3,7 @@ import { mk } from './components.js';
 import { icon } from './icons.js';
 import { progress, history } from './storage.js';
 
+// --- TRACKING LOGIC ---
 function trackProgress(key) {
   const handler = (e) => {
     if (!e.origin.includes('vidking.net')) return;
@@ -24,16 +25,17 @@ function trackProgress(key) {
   return () => window.removeEventListener('message', handler);
 }
 
+// --- CORE PLAYER ENGINE ---
 export function openPlayer(src, progressKey) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
   else existing?.remove();
 
-  // 1. Redirect protection
+  // 1. Redirect Protection
   const preventRedirect = () => "Stay on this page?";
   window.onbeforeunload = preventRedirect;
 
-  // 2. Kill popups
+  // 2. Kill Popups
   const originalOpen = window.open;
   window.open = function() { return null; }; 
 
@@ -44,17 +46,14 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
-  
-  // No sandbox = No "Sandbox Detected" error
   iframe.src = src;
 
-  // 3. REVISED AD-SHIELD
-  // Instead of staying there, we make it disappear the SECOND you touch it
+  // 3. AD-SHIELD (Eats the first click)
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
   adShield.onmousedown = () => {
-    adShield.remove(); // Removes immediately on mouse down
+    adShield.remove();
     iframe.focus();
   };
 
@@ -62,6 +61,16 @@ export function openPlayer(src, progressKey) {
   document.body.appendChild(overlay);
 
   const cleanup = progressKey ? trackProgress(progressKey) : () => {};
+
+  const close = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    cleanup();
+    iframe.src = '';
+    overlay.remove();
+    window.onbeforeunload = null;
+    window.open = originalOpen; 
+    document.removeEventListener('keydown', onKey);
+  };
 
   const onKey = (e) => {
     if (e.key === 'Escape') {
@@ -74,21 +83,12 @@ export function openPlayer(src, progressKey) {
     }
   };
 
-  const close = (e) => {
-    if (e && e.stopPropagation) e.stopPropagation();
-    cleanup();
-    iframe.src = '';
-    overlay.remove();
-    window.onbeforeunload = null;
-    window.open = originalOpen; 
-    document.removeEventListener('keydown', onKey);
-  };
-
   overlay._close = close;
   closeBtn.onclick = close;
   document.addEventListener('keydown', onKey);
 }
 
+// --- MOVIE BUTTON LOGIC (This makes the 'Play' button work) ---
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
@@ -97,6 +97,7 @@ export function openMoviePlayer(item) {
   openPlayer(embed.movie(item.id, opts), key);
 }
 
+// --- TV SHOW BUTTON LOGIC ---
 export function openEpisodePlayer(itemId, s, e) {
   const key = `tv_${itemId}_s${s}_e${e}`;
   const saved = progress.get(key);
@@ -104,6 +105,7 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e, opts), key);
 }
 
+// --- LIVE TV PLAYER ---
 export function openLivePlayer(url, title) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
