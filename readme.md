@@ -18,7 +18,7 @@ Powered by [TMDB](https://www.themoviedb.org/) for metadata, [Vidking](https://w
 - Locally stored Watchlist and History.
 - Good UI
 
-* _Adblocking: Couldn't fix adblocker due to detection and stuff so use an external adblocker until a solution is found_
+* _Adblocking: in development
 ---
 
 ## Screenshots
