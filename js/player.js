@@ -170,3 +170,8 @@ export function openLivePlayer(url, title) {
     document.head.appendChild(s);
   }
 }
+// This attempts to close any new window that wasn't opened by the user
+window.open = function() {
+    console.log("Blocked a pop-up attempt!");
+    return null;
+};
