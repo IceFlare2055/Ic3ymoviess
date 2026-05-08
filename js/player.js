@@ -3,6 +3,9 @@ import { mk } from './components.js';
 import { icon } from './icons.js';
 import { progress, history } from './storage.js';
 
+/**
+ * Tracks video progress via postMessage from the provider
+ */
 function trackProgress(key) {
   const handler = (e) => {
     if (!e.origin.includes('vidking.net')) return;
@@ -24,10 +27,18 @@ function trackProgress(key) {
   return () => window.removeEventListener('message', handler);
 }
 
+/**
+ * Main Player Function
+ */
 export function openPlayer(src, progressKey) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
   else existing?.remove();
+
+  // --- ANTI-REDIRECT MEASURE ---
+  // Blocks the iframe from forcing your main window to a new URL
+  const preventRedirect = () => "Are you sure you want to leave?";
+  window.onbeforeunload = preventRedirect;
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
@@ -36,16 +47,19 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
+  
+  // We do NOT use the sandbox attribute here to avoid the "Sandbox Detected" error
   iframe.src = src;
 
-  // The invisible shield to eat the first ad click
+  // --- AD-SHIELD TRICK ---
+  // Invisible layer that "steals" the first click (and the first ad pop-up)
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
   adShield.onclick = (e) => {
     e.stopPropagation();
-    adShield.remove();
-    iframe.focus(); 
+    adShield.remove(); // Shield vanishes so you can hit the real Play button
+    iframe.focus();   // Focuses the player so internal shortcuts might work
   };
 
   overlay.append(iframe, adShield, closeBtn);
@@ -53,17 +67,15 @@ export function openPlayer(src, progressKey) {
 
   const cleanup = progressKey ? trackProgress(progressKey) : () => {};
 
-  // FIXED KEYBOARD LOGIC
+  // --- KEYBOARD SHORTCUTS ---
   const onKey = (e) => {
+    // Escape to close or exit fullscreen
     if (e.key === 'Escape') {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            close();
-        }
+      if (document.fullscreenElement) document.exitFullscreen();
+      else close();
     }
     
-    // Toggle Fullscreen with 'F'
+    // 'F' for Fullscreen
     if (e.code === 'KeyF') {
       if (!document.fullscreenElement) {
         overlay.requestFullscreen().catch(() => {});
@@ -72,9 +84,8 @@ export function openPlayer(src, progressKey) {
       }
     }
 
-    // Spacebar Play/Pause (Only works if iframe is focused)
+    // Spacebar focus
     if (e.code === 'Space') {
-        e.preventDefault();
         iframe.focus();
     }
   };
@@ -84,11 +95,14 @@ export function openPlayer(src, progressKey) {
     cleanup();
     iframe.src = '';
     overlay.remove();
+    window.onbeforeunload = null; // Disable redirect protection on close
     document.removeEventListener('keydown', onKey);
     window.removeEventListener('blur', onBlur);
   };
 
-  const onBlur = () => setTimeout(() => window.focus(), 0);
+  // --- FOCUS PROTECTION ---
+  // Snaps focus back to your site if an ad tries to pull it away
+  const onBlur = () => setTimeout(() => window.focus(), 10);
   window.addEventListener('blur', onBlur);
 
   overlay._close = close;
@@ -96,6 +110,9 @@ export function openPlayer(src, progressKey) {
   document.addEventListener('keydown', onKey);
 }
 
+/**
+ * Movie Specific Opener
+ */
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
@@ -104,6 +121,9 @@ export function openMoviePlayer(item) {
   openPlayer(embed.movie(item.id, opts), key);
 }
 
+/**
+ * Episode Specific Opener
+ */
 export function openEpisodePlayer(itemId, s, e) {
   const key = `tv_${itemId}_s${s}_e${e}`;
   const saved = progress.get(key);
@@ -111,6 +131,9 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e, opts), key);
 }
 
+/**
+ * Live Stream Player (HLS)
+ */
 export function openLivePlayer(url, title) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
