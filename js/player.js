@@ -6,22 +6,18 @@ export function openPlayer(src) {
   const existing = document.querySelector('.player-overlay');
   if (existing) existing.remove();
 
-  // 1. REDIRECT PROTECTION
-  window.onbeforeunload = () => "Stay here to keep watching!";
+  // 1. THE NAVIGATION TRAP
+  // This is our primary defense since we can't use a sandbox.
+  window.onbeforeunload = () => "An ad tried to redirect you. Stay here to watch!";
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const iframe = document.createElement('iframe');
 
+  // 2. CLEAN IFRAME (No Sandbox)
   iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
   iframe.setAttribute('referrerpolicy', 'origin');
   iframe.setAttribute('frameborder', '0');
-  
-  // 2. VIDLINK FRIENDLY SANDBOX
-  // We added 'allow-top-navigation-by-user-activation' so it doesn't stay black
-  // but kept 'allow-downloads' REMOVED to block those scary files.
-  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-top-navigation-by-user-activation');
-  
   iframe.src = src;
 
   // 3. THE AD-SHIELD
@@ -37,7 +33,7 @@ export function openPlayer(src) {
   document.body.appendChild(overlay);
 
   const close = () => {
-    window.onbeforeunload = null;
+    window.onbeforeunload = null; // Disable trap on close
     iframe.src = '';
     overlay.remove();
   };
@@ -60,22 +56,7 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e));
 }
 
-export function openLivePlayer(url, title) {
-    const existing = document.querySelector('.player-overlay');
-    if (existing) existing.remove();
-    const overlay = mk('div', 'player-overlay');
-    const closeBtn = mk('button', 'player-close', icon('x', 20));
-    const video = document.createElement('video');
-    video.controls = true;
-    video.autoplay = true;
-    video.style.width = '100%';
-    video.style.height = '100%';
-    overlay.append(video, closeBtn);
-    document.body.appendChild(overlay);
-    if (window.Hls && window.Hls.isSupported()) {
-      const hls = new window.Hls();
-      hls.loadSource(url);
-      hls.attachMedia(video);
-    } else { video.src = url; }
-    closeBtn.onclick = () => { video.pause(); overlay.remove(); };
-}
+// Global Popup Killer (Stays active in the background)
+(function() {
+    window.open = function() { return { focus: () => {}, blur: () => {}, close: () => {} }; };
+})();
