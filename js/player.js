@@ -3,7 +3,6 @@ import { mk } from './components.js';
 import { icon } from './icons.js';
 import { progress, history } from './storage.js';
 
-// --- PROGRESS TRACKING ---
 function trackProgress(key) {
   const handler = (e) => {
     if (!e.origin.includes('vidking.net')) return;
@@ -25,11 +24,14 @@ function trackProgress(key) {
   return () => window.removeEventListener('message', handler);
 }
 
-// --- CORE PLAYER ENGINE ---
 export function openPlayer(src, progressKey) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
   else existing?.remove();
+
+  // --- THE REDIRECT LOCK ---
+  // If an ad tries to hijack the tab, this forces a "Stay on Page" prompt.
+  window.onbeforeunload = () => "Do you want to leave?";
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
@@ -40,13 +42,17 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('frameborder', '0');
   iframe.src = src;
 
-  // AD-SHIELD: Invisible layer that vanishes on click
+  // --- THE CLICK SNATCHER ---
+  // This helps prevent "invisible" ad layers from triggering when you click the player
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
-  adShield.onmousedown = () => {
-    adShield.remove();
-    iframe.focus();
+  adShield.onmousedown = (e) => {
+    // If it's the very first click, remove the shield
+    if (document.querySelector('.ad-shield')) {
+        adShield.remove();
+        iframe.focus();
+    }
   };
 
   overlay.append(iframe, adShield, closeBtn);
@@ -59,6 +65,7 @@ export function openPlayer(src, progressKey) {
     cleanup();
     iframe.src = '';
     overlay.remove();
+    window.onbeforeunload = null; // Turn off the lock when we close the player
     document.removeEventListener('keydown', onKey);
   };
 
@@ -78,8 +85,7 @@ export function openPlayer(src, progressKey) {
   document.addEventListener('keydown', onKey);
 }
 
-// --- BUTTON TRIGGERS ---
-// These MUST be here for the buttons on your page to work!
+// --- BUTTON EXPORTS ---
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
@@ -95,6 +101,7 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e, opts), key);
 }
 
+// --- LIVE TV ---
 export function openLivePlayer(url, title) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
@@ -104,13 +111,12 @@ export function openLivePlayer(url, title) {
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const video = document.createElement('video');
   const loading = mk('div', 'live-fs-loading', `<div class="spin-ring"><div></div><div></div><div></div><div></div></div><span>Connecting…</span>`);
-  const info = mk('div', 'live-fs-info', `<span class="live-fs-badge">${icon('circle', 8, { fill: 'currentColor' })} LIVE</span><span class="live-fs-title">${title || ''}</span>`);
-
+  
   video.controls = true;
   video.autoplay = true;
   video.playsInline = true;
 
-  overlay.append(video, closeBtn, loading, info);
+  overlay.append(video, closeBtn, loading);
   document.body.appendChild(overlay);
 
   const close = (e) => {
@@ -132,7 +138,7 @@ export function openLivePlayer(url, title) {
       video.src = url;
       video.oncanplay = () => loading.remove();
     } else if (window.Hls?.isSupported()) {
-      const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+      const hls = new window.Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
@@ -140,8 +146,6 @@ export function openLivePlayer(url, title) {
         video.play().catch(() => {});
       });
       video._hls = hls;
-    } else {
-      loading.innerHTML = 'HLS not supported';
     }
   };
 
@@ -153,26 +157,17 @@ export function openLivePlayer(url, title) {
     document.head.appendChild(s);
   }
 }
-// --- GLOBAL REDIRECT & POPUP GUARD ---
+
+// --- ANTI-POPUP GLOBAL SCRIPT ---
+// This runs constantly to kill any window.open attempt
 (function() {
-    // 1. Block any attempt to open a new window/tab
+    const originalOpen = window.open;
     window.open = function() {
-        console.log("Global Guard: Blocked a popup attempt.");
-        return null; 
+        console.log("Ad Blocked");
+        return { 
+            blur: () => {}, 
+            focus: () => {}, 
+            close: () => {} 
+        }; 
     };
-
-    // 2. Block the "Back Button" hijacking
-    const noop = () => {};
-    window.history.pushState = noop;
-    window.history.replaceState = noop;
-
-    // 3. The "Stay on Page" Lock
-    // This triggers a browser popup if an ad tries to force the page to a new URL
-    window.addEventListener('beforeunload', (event) => {
-        // Only show the warning if the player overlay is currently open
-        if (document.querySelector('.player-overlay')) {
-            event.preventDefault();
-            event.returnValue = ''; // Required for Chrome
-        }
-    });
 })();
