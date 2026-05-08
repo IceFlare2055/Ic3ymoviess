@@ -3,7 +3,7 @@ import { mk } from './components.js';
 import { icon } from './icons.js';
 import { progress, history } from './storage.js';
 
-// --- TRACKING LOGIC ---
+// --- PROGRESS TRACKING ---
 function trackProgress(key) {
   const handler = (e) => {
     if (!e.origin.includes('vidking.net')) return;
@@ -31,14 +31,6 @@ export function openPlayer(src, progressKey) {
   if (existing && existing._close) existing._close();
   else existing?.remove();
 
-  // 1. Redirect Protection
-  const preventRedirect = () => "Stay on this page?";
-  window.onbeforeunload = preventRedirect;
-
-  // 2. Kill Popups
-  const originalOpen = window.open;
-  window.open = function() { return null; }; 
-
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const iframe = document.createElement('iframe');
@@ -48,7 +40,7 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('frameborder', '0');
   iframe.src = src;
 
-  // 3. AD-SHIELD (Eats the first click)
+  // AD-SHIELD: Invisible layer that vanishes on click
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
@@ -67,8 +59,6 @@ export function openPlayer(src, progressKey) {
     cleanup();
     iframe.src = '';
     overlay.remove();
-    window.onbeforeunload = null;
-    window.open = originalOpen; 
     document.removeEventListener('keydown', onKey);
   };
 
@@ -88,7 +78,8 @@ export function openPlayer(src, progressKey) {
   document.addEventListener('keydown', onKey);
 }
 
-// --- MOVIE BUTTON LOGIC (This makes the 'Play' button work) ---
+// --- BUTTON TRIGGERS ---
+// These MUST be here for the buttons on your page to work!
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
@@ -97,7 +88,6 @@ export function openMoviePlayer(item) {
   openPlayer(embed.movie(item.id, opts), key);
 }
 
-// --- TV SHOW BUTTON LOGIC ---
 export function openEpisodePlayer(itemId, s, e) {
   const key = `tv_${itemId}_s${s}_e${e}`;
   const saved = progress.get(key);
@@ -105,7 +95,6 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e, opts), key);
 }
 
-// --- LIVE TV PLAYER ---
 export function openLivePlayer(url, title) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
