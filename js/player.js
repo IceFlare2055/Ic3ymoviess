@@ -146,3 +146,108 @@ export function openLivePlayer(url, title) {
     document.head.appendChild(s);
   }
 }
+import { player as embed } from './config.js';
+import { mk } from './components.js';
+import { icon } from './icons.js';
+import { progress, history } from './storage.js';
+
+export function openPlayer(src, progressKey) {
+  const existing = document.querySelector('.player-overlay');
+  if (existing && existing._close) existing._close();
+  else existing?.remove();
+
+  // 1. THE REDIRECT LOCK
+  // If an ad tries to hijack the tab, this forces a "Stay on Page" prompt.
+  window.onbeforeunload = () => "An ad tried to redirect you. Stay here to watch the movie.";
+
+  const overlay = mk('div', 'player-overlay');
+  const closeBtn = mk('button', 'player-close', icon('x', 20));
+  const iframe = document.createElement('iframe');
+
+  iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+  iframe.setAttribute('referrerpolicy', 'origin');
+  iframe.setAttribute('frameborder', '0');
+
+  // 2. THE DOWNLOAD & REDIRECT JAIL
+  // We omit 'allow-top-navigation' to stop redirects.
+  // We omit 'allow-downloads' to stop those scary file downloads.
+  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
+
+  iframe.src = src;
+
+  // 3. THE CLICK-EATER SHIELD
+  const adShield = mk('div', 'ad-shield');
+  adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
+  
+  adShield.onmousedown = () => {
+    adShield.remove();
+    iframe.focus();
+    console.log("Shield dropped. First ad attempt neutralized.");
+  };
+
+  overlay.append(iframe, adShield, closeBtn);
+  document.body.appendChild(overlay);
+
+  const onKey = (e) => {
+    if (e.key === 'Escape') {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else close();
+    }
+    if (e.code === 'KeyF') {
+      if (!document.fullscreenElement) overlay.requestFullscreen().catch(() => {});
+      else document.exitFullscreen();
+    }
+  };
+
+  const close = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    iframe.src = '';
+    overlay.remove();
+    window.onbeforeunload = null; 
+    document.removeEventListener('keydown', onKey);
+  };
+
+  overlay._close = close;
+  closeBtn.onclick = close;
+  document.addEventListener('keydown', onKey);
+}
+
+// --- KEEP THESE AT THE BOTTOM FOR THE BUTTONS TO WORK ---
+export function openMoviePlayer(item) {
+  history.add(item, 'movie');
+  openPlayer(embed.movie(item.id), `movie_${item.id}`);
+}
+
+export function openEpisodePlayer(itemId, s, e) {
+  openPlayer(embed.tv(itemId, s, e), `tv_${itemId}_s${s}_e${e}`);
+}
+
+export function openLivePlayer(url, title) {
+  // Live player logic...
+  const existing = document.querySelector('.player-overlay');
+  if (existing && existing._close) existing._close();
+  else existing?.remove();
+
+  const overlay = mk('div', 'player-overlay');
+  const closeBtn = mk('button', 'player-close', icon('x', 20));
+  const video = document.createElement('video');
+  video.controls = true;
+  video.autoplay = true;
+  overlay.append(video, closeBtn);
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    video.pause();
+    overlay.remove();
+  };
+  closeBtn.onclick = close;
+}
+
+// --- GLOBAL POPUP OVERRIDE ---
+// This kills most popups before they even start
+(function() {
+    const originalOpen = window.open;
+    window.open = function() {
+        return { blur: () => {}, focus: () => {}, close: () => {} }; 
+    };
+})();
