@@ -114,3 +114,19 @@ export function Tabs(tabs, active, onChange) {
   });
   return bar;
 }
+import { mk } from './components.js';
+
+export function createMoodBar(moods, onMoodClick) {
+  const container = mk('div', 'mood-bar');
+  
+  moods.forEach(mood => {
+    const btn = mk('button', 'mood-btn');
+    btn.innerHTML = `<span class="mood-emoji">${mood.emoji}</span> ${mood.name}`;
+    
+    btn.onclick = () => onMoodClick(mood);
+    container.append(btn);
+  });
+  
+  return container;
+}
+
