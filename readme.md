@@ -1,4 +1,4 @@
-# Zentro
+# Zentro 2.0 aka Ic3y
 <div align="center">
   <img 
     src="assets/logo.png" 
