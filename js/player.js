@@ -10,14 +10,15 @@ export function openPlayer(src) {
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const iframe = document.createElement('iframe');
 
-  // Basic settings to ensure the movie actually loads
+  // These specific settings help bypass the black screen
   iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.setAttribute('frameborder', '0');
+  
+  // No sandbox attribute at all - this is the most compatible way
   iframe.src = src;
 
-  // THE AD-SHIELD: This is your only blocker now. 
-  // It catches the first "nasty" click before the ad scripts can.
+  // AD-SHIELD: Catches the first ad click so it doesn't hijack your page
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background:rgba(0,0,0,0.01);');
   
@@ -29,21 +30,18 @@ export function openPlayer(src) {
   overlay.append(iframe, adShield, closeBtn);
   document.body.appendChild(overlay);
 
-  const close = () => {
+  closeBtn.onclick = () => {
     iframe.src = '';
     overlay.remove();
   };
 
-  closeBtn.onclick = close;
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') {
+        iframe.src = '';
+        overlay.remove();
+    }
   });
 }
 
-export function openMoviePlayer(item) {
-  openPlayer(embed.movie(item.id));
-}
-
-export function openEpisodePlayer(itemId, s, e) {
-  openPlayer(embed.tv(itemId, s, e));
-}
+export function openMoviePlayer(item) { openPlayer(embed.movie(item.id)); }
+export function openEpisodePlayer(itemId, s, e) { openPlayer(embed.tv(itemId, s, e)); }
