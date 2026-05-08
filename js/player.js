@@ -1,10 +1,22 @@
 import { player as embed } from './config.js';
 import { mk } from './components.js';
 import { icon } from './icons.js';
+import { progress, history } from './storage.js';
 
-export function openPlayer(src) {
+function trackProgress(key) {
+  const handler = (e) => {
+    if (e.data?.type === 'v_progress') {
+      progress.set(key, { t: e.data.time, d: e.data.duration });
+    }
+  };
+  window.addEventListener('message', handler);
+  return () => window.removeEventListener('message', handler);
+}
+
+export function openPlayer(src, progressKey) {
   const existing = document.querySelector('.player-overlay');
-  if (existing) existing.remove();
+  if (existing && existing._close) existing._close();
+  else existing?.remove();
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
@@ -14,9 +26,8 @@ export function openPlayer(src) {
   iframe.setAttribute('frameborder', '0');
   iframe.src = src;
 
-  // The Ad-Shield stays to catch that first click
   const adShield = mk('div', 'ad-shield');
-  adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background:rgba(0,0,0,0.01);');
+  adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
   adShield.onmousedown = () => {
     adShield.remove();
@@ -26,7 +37,11 @@ export function openPlayer(src) {
   overlay.append(iframe, adShield, closeBtn);
   document.body.appendChild(overlay);
 
-  const close = () => {
+  const cleanup = progressKey ? trackProgress(progressKey) : () => {};
+
+  const close = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    cleanup();
     iframe.src = '';
     overlay.remove();
     document.removeEventListener('keydown', onKey);
@@ -34,7 +49,7 @@ export function openPlayer(src) {
 
   const onKey = (e) => {
     if (e.key === 'Escape') close();
-    // Press 'F' to go Fullscreen
+    // Re-adding the 'F' for Fullscreen fix
     if (e.code === 'KeyF') {
       if (!document.fullscreenElement) {
         overlay.requestFullscreen().catch(() => {});
@@ -44,9 +59,22 @@ export function openPlayer(src) {
     }
   };
 
+  overlay._close = close;
   closeBtn.onclick = close;
   document.addEventListener('keydown', onKey);
 }
 
-export function openMoviePlayer(item) { openPlayer(embed.movie(item.id)); }
-export function openEpisodePlayer(itemId, s, e) { openPlayer(embed.tv(itemId, s, e)); }
+export function openMoviePlayer(item) {
+  history.add(item, 'movie');
+  const key = `movie_${item.id}`;
+  const saved = progress.get(key);
+  const opts = saved?.t > 10 ? { timestamp: saved.t } : {};
+  openPlayer(embed.movie(item.id, opts), key);
+}
+
+export function openEpisodePlayer(itemId, s, e) {
+  const key = `tv_${itemId}_s${s}_e${e}`;
+  const saved = progress.get(key);
+  const opts = saved?.t > 10 ? { timestamp: saved.t } : {};
+  openPlayer(embed.tv(itemId, s, e, opts), key);
+}
