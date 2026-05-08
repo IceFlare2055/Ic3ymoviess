@@ -34,24 +34,19 @@ export const img = (path, size = 'w342') =>
     ? `https://wsrv.nl/?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2F${size}${encodeURIComponent(path)}&output=webp&q=80&n=-1`
     : null;
 
-// --- UPDATED PLAYER SECTION ---
+// --- MULTI-SERVER PLAYER SECTION ---
 export const player = {
-  // Switched to Vidsrc.to to stop seeker-bar redirects
+  // We are using vidsrc.me as it is currently more stable than .to
   movie: (id, opts = {}) =>
-    buildVid(`https://vidsrc.to/embed/movie/${id}`, opts),
+    buildVid(`https://vidsrc.me/embed/movie?tmdb=${id}`, opts),
   tv: (id, s, e, opts = {}) =>
-    buildVid(`https://vidsrc.to/embed/tv/${id}/${s}/${e}`, opts),
+    buildVid(`https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`, opts),
 };
 
 function buildVid(base, extra = {}) {
-  // Filters out empty options and builds the URL
-  const params = new URLSearchParams();
-  
-  // Vidsrc.to specific: use 't' for timestamp if provided
+  // If we have a timestamp (for resuming), we add it here
   if (extra.timestamp) {
-    params.append('t', extra.timestamp);
+    return `${base}&t=${extra.timestamp}`;
   }
-
-  const queryString = params.toString();
-  return queryString ? `${base}?${queryString}` : base;
+  return base;
 }
