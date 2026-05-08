@@ -12,8 +12,8 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
 
 export const img = (path, size = 'w342') => path ? `https://wsrv.nl/?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2F${size}${encodeURIComponent(path)}&output=webp&q=80&n=-1` : null;
 
-// --- UPDATED TO EMBED.SU (1080P + LESS ADS) ---
+// --- SWITCHED TO VIDSRC.PRO (High Quality + Better Access) ---
 export const player = {
-  movie: (id) => `https://embed.su/embed/movie/${id}`,
-  tv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`
+  movie: (id) => `https://vidsrc.pro/embed/movie/${id}`,
+  tv: (id, s, e) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`
 };
