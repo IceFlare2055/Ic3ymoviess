@@ -153,3 +153,26 @@ export function openLivePlayer(url, title) {
     document.head.appendChild(s);
   }
 }
+// --- GLOBAL REDIRECT & POPUP GUARD ---
+(function() {
+    // 1. Block any attempt to open a new window/tab
+    window.open = function() {
+        console.log("Global Guard: Blocked a popup attempt.");
+        return null; 
+    };
+
+    // 2. Block the "Back Button" hijacking
+    const noop = () => {};
+    window.history.pushState = noop;
+    window.history.replaceState = noop;
+
+    // 3. The "Stay on Page" Lock
+    // This triggers a browser popup if an ad tries to force the page to a new URL
+    window.addEventListener('beforeunload', (event) => {
+        // Only show the warning if the player overlay is currently open
+        if (document.querySelector('.player-overlay')) {
+            event.preventDefault();
+            event.returnValue = ''; // Required for Chrome
+        }
+    });
+})();
