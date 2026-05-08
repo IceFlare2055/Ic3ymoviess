@@ -34,20 +34,24 @@ export const img = (path, size = 'w342') =>
     ? `https://wsrv.nl/?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2F${size}${encodeURIComponent(path)}&output=webp&q=80&n=-1`
     : null;
 
+// --- UPDATED PLAYER SECTION ---
 export const player = {
+  // Switched to Vidsrc.to to stop seeker-bar redirects
   movie: (id, opts = {}) =>
-    buildVid(`https://www.vidking.net/embed/movie/${id}`, opts),
+    buildVid(`https://vidsrc.to/embed/movie/${id}`, opts),
   tv: (id, s, e, opts = {}) =>
-    buildVid(`https://www.vidking.net/embed/tv/${id}/${s}/${e}`, opts),
+    buildVid(`https://vidsrc.to/embed/tv/${id}/${s}/${e}`, opts),
 };
 
 function buildVid(base, extra = {}) {
-  const p = new URLSearchParams({
-    color: '16FF00',
-    autoPlay: 'true',
-    nextEpisode: 'true',
-    episodeSelector: 'true',
-    ...extra,
-  });
-  return `${base}?${p}`;
+  // Filters out empty options and builds the URL
+  const params = new URLSearchParams();
+  
+  // Vidsrc.to specific: use 't' for timestamp if provided
+  if (extra.timestamp) {
+    params.append('t', extra.timestamp);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${base}?${queryString}` : base;
 }
