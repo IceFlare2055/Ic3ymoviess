@@ -1,3 +1,8 @@
 js/env.js
 api.md
 changes.md
+# Dependencies
+node_modules/
+
+# Build output
+dist/
