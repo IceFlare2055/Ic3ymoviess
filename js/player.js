@@ -9,13 +9,6 @@ export function openPlayer(src) {
   // 1. REDIRECT PROTECTION
   window.onbeforeunload = () => "Stay here to keep watching!";
 
-  // 2. ACTIVE POPUP KILLER
-  const blocker = setInterval(() => {
-    if (window.open) {
-        window.open = function() { return { focus: () => {}, blur: () => {}, close: () => {} }; };
-    }
-  }, 200);
-
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const iframe = document.createElement('iframe');
@@ -24,12 +17,14 @@ export function openPlayer(src) {
   iframe.setAttribute('referrerpolicy', 'origin');
   iframe.setAttribute('frameborder', '0');
   
-  // Hardened Sandbox to block those auto-downloads you saw
-  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups');
+  // 2. VIDLINK FRIENDLY SANDBOX
+  // We added 'allow-top-navigation-by-user-activation' so it doesn't stay black
+  // but kept 'allow-downloads' REMOVED to block those scary files.
+  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-top-navigation-by-user-activation');
   
   iframe.src = src;
 
-  // 3. AD-SHIELD
+  // 3. THE AD-SHIELD
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer;');
   
@@ -42,7 +37,6 @@ export function openPlayer(src) {
   document.body.appendChild(overlay);
 
   const close = () => {
-    clearInterval(blocker);
     window.onbeforeunload = null;
     iframe.src = '';
     overlay.remove();
@@ -51,7 +45,10 @@ export function openPlayer(src) {
   closeBtn.onclick = close;
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') close();
-    if (e.code === 'KeyF') overlay.requestFullscreen().catch(() => {});
+    if (e.code === 'KeyF') {
+        if (!document.fullscreenElement) overlay.requestFullscreen().catch(() => {});
+        else document.exitFullscreen();
+    }
   });
 }
 
@@ -71,6 +68,8 @@ export function openLivePlayer(url, title) {
     const video = document.createElement('video');
     video.controls = true;
     video.autoplay = true;
+    video.style.width = '100%';
+    video.style.height = '100%';
     overlay.append(video, closeBtn);
     document.body.appendChild(overlay);
     if (window.Hls && window.Hls.isSupported()) {
