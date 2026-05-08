@@ -12,9 +12,8 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
 
 export const img = (path, size = 'w342') => path ? `https://wsrv.nl/?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2F${size}${encodeURIComponent(path)}&output=webp&q=80&n=-1` : null;
 
-// --- SUPER PROVIDER ---
+// --- THE MASTER PROVIDER (AUTO-ROTATING SERVERS) ---
 export const player = {
-  // We use Vidsrc.me because it's the hardest to block and loads the fastest
-  movie: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`,
-  tv: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&sea=${s}&epi=${e}`
+  movie: (id) => `https://vidsrc.xyz/embed/movie/${id}`,
+  tv: (id, s, e) => `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}`
 };
