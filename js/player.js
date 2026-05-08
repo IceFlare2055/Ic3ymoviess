@@ -44,8 +44,8 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
   
-  // ADDED SANDBOX TO BLOCK POP-UP ADS
-  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
+  // OPTION 1: LOOSENED SHIELD TO BYPASS DETECTION
+  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
 
   iframe.src = src;
 
