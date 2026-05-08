@@ -46,3 +46,22 @@ Powered by [TMDB](https://www.themoviedb.org/) for metadata, [Vidking](https://w
 
 
 All content is provided by third-party services. For any DMCA or legal inquiries, please contact the respective API providers directly.
+## Development
+
+### Setup
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Speed Insights
+This project includes [Vercel Speed Insights](https://vercel.com/docs/speed-insights) to track performance metrics. The integration is automatic and will only send data in production environments.
