@@ -1,4 +1,4 @@
-# Zentro
+# Ic3y
 <div align="center">
   <img 
     src="assets/logo.png" 
