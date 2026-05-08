@@ -43,13 +43,21 @@ export function openPlayer(src, progressKey) {
   );
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
-  
-  // OPTION 1: LOOSENED SHIELD TO BYPASS DETECTION
-  iframe.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
 
+  // We removed the sandbox line so the error disappears
   iframe.src = src;
 
-  overlay.append(iframe, closeBtn);
+  // AD-SHIELD TRICK:
+  // This creates an invisible layer that "eats" the first click (and the first ad)
+  const adShield = mk('div', 'ad-shield');
+  adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
+  
+  adShield.onclick = (e) => {
+    e.stopPropagation();
+    adShield.remove(); // The shield disappears after the first click
+  };
+
+  overlay.append(iframe, adShield, closeBtn); // Shield is placed on top of the iframe
   document.body.appendChild(overlay);
 
   const cleanup = progressKey ? trackProgress(progressKey) : () => {};
