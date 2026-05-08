@@ -11,14 +11,10 @@ export function openPlayer(src) {
   const iframe = document.createElement('iframe');
 
   iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
-  iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.setAttribute('frameborder', '0');
-  
-  // NO SANDBOX: This ensures the movie ALWAYS loads.
   iframe.src = src;
 
-  // AD-SHIELD: Your single line of defense.
-  // It stays over the player until you click it once.
+  // The Ad-Shield stays to catch that first click
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background:rgba(0,0,0,0.01);');
   
@@ -30,17 +26,26 @@ export function openPlayer(src) {
   overlay.append(iframe, adShield, closeBtn);
   document.body.appendChild(overlay);
 
-  closeBtn.onclick = () => {
+  const close = () => {
     iframe.src = '';
     overlay.remove();
+    document.removeEventListener('keydown', onKey);
   };
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        iframe.src = '';
-        overlay.remove();
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    // Press 'F' to go Fullscreen
+    if (e.code === 'KeyF') {
+      if (!document.fullscreenElement) {
+        overlay.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen();
+      }
     }
-  });
+  };
+
+  closeBtn.onclick = close;
+  document.addEventListener('keydown', onKey);
 }
 
 export function openMoviePlayer(item) { openPlayer(embed.movie(item.id)); }
