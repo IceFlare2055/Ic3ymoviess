@@ -266,3 +266,19 @@ searchForm.addEventListener('submit', (e) => {
 });
 
 handleHash();
+import { moods } from './moods.js';
+import { createMoodBar } from './components.js';
+import { getMoviesByMood } from './api.js';
+
+// Inside your main render function:
+const moodBar = createMoodBar(moods, async (mood) => {
+  const results = await getMoviesByMood(mood.params);
+  
+  // Replace 'renderGrid' with whatever function app.js uses 
+  // to show a list of movies on your screen!
+  renderGrid(results, `Mood: ${mood.name}`); 
+});
+
+// This adds the bar to the top of your page
+document.querySelector('#app').prepend(moodBar); 
+
