@@ -103,3 +103,16 @@ async function searchByMood(mood) {
   // Replace 'renderMovies' with whatever function you use to display the grid
   renderMovies(data.results, `Mood: ${mood.name}`);
 }
+
+export async function getMoviesByMood(moodParams) {
+  const { TMDB } = await import('./config.js');
+  const query = new URLSearchParams({
+    api_key: TMDB.key,
+    sort_by: 'popularity.desc',
+    ...moodParams
+  });
+
+  const response = await fetch(`${TMDB.base}/discover/movie?${query}`);
+  const data = await response.json();
+  return data.results;
+}
