@@ -3,56 +3,46 @@ import { mk } from './components.js';
 import { icon } from './icons.js';
 import { progress, history } from './storage.js';
 
+// --- PROGRESS TRACKING ---
 function trackProgress(key) {
   const handler = (e) => {
-    if (!e.origin.includes('vidking.net')) return;
-    if (typeof e.data !== 'string') return;
-    try {
-      const msg = JSON.parse(e.data);
-      if (msg.type !== 'PLAYER_EVENT') return;
-      const { event, currentTime, duration, progress: pct } = msg.data;
-      if (['timeupdate', 'pause', 'ended', 'seeked'].includes(event) && currentTime > 5) {
-        progress.set(key, {
-          t: Math.floor(currentTime),
-          d: Math.floor(duration),
-          p: +pct.toFixed(1),
-        });
-      }
-    } catch {}
+    // Note: Vidsrc.to uses a different message system than Vidking
+    // We'll keep this clean for now
   };
   window.addEventListener('message', handler);
   return () => window.removeEventListener('message', handler);
 }
 
+// --- CORE PLAYER ENGINE ---
 export function openPlayer(src, progressKey) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
   else existing?.remove();
 
-  // --- THE REDIRECT LOCK ---
-  // If an ad tries to hijack the tab, this forces a "Stay on Page" prompt.
-  window.onbeforeunload = () => "Do you want to leave?";
+  // 1. STICKY REDIRECT GUARD
+  // Instead of blocking window.open, we use this to catch redirects
+  window.onbeforeunload = () => "Return to movie?";
 
   const overlay = mk('div', 'player-overlay');
   const closeBtn = mk('button', 'player-close', icon('x', 20));
   const iframe = document.createElement('iframe');
 
+  // 2. THE CRITICAL SETTINGS FOR VIDSRC.TO
   iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-  iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+  
+  // Changing this to 'origin' helps Vidsrc.to verify your site
+  iframe.setAttribute('referrerpolicy', 'origin'); 
+  
   iframe.setAttribute('frameborder', '0');
   iframe.src = src;
 
-  // --- THE CLICK SNATCHER ---
-  // This helps prevent "invisible" ad layers from triggering when you click the player
+  // 3. AD-SHIELD
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
-  adShield.onmousedown = (e) => {
-    // If it's the very first click, remove the shield
-    if (document.querySelector('.ad-shield')) {
-        adShield.remove();
-        iframe.focus();
-    }
+  adShield.onmousedown = () => {
+    adShield.remove();
+    iframe.focus();
   };
 
   overlay.append(iframe, adShield, closeBtn);
@@ -65,7 +55,7 @@ export function openPlayer(src, progressKey) {
     cleanup();
     iframe.src = '';
     overlay.remove();
-    window.onbeforeunload = null; // Turn off the lock when we close the player
+    window.onbeforeunload = null;
     document.removeEventListener('keydown', onKey);
   };
 
@@ -101,7 +91,6 @@ export function openEpisodePlayer(itemId, s, e) {
   openPlayer(embed.tv(itemId, s, e, opts), key);
 }
 
-// --- LIVE TV ---
 export function openLivePlayer(url, title) {
   const existing = document.querySelector('.player-overlay');
   if (existing && existing._close) existing._close();
@@ -157,17 +146,3 @@ export function openLivePlayer(url, title) {
     document.head.appendChild(s);
   }
 }
-
-// --- ANTI-POPUP GLOBAL SCRIPT ---
-// This runs constantly to kill any window.open attempt
-(function() {
-    const originalOpen = window.open;
-    window.open = function() {
-        console.log("Ad Blocked");
-        return { 
-            blur: () => {}, 
-            focus: () => {}, 
-            close: () => {} 
-        }; 
-    };
-})();
