@@ -29,11 +29,11 @@ export function openPlayer(src, progressKey) {
   if (existing && existing._close) existing._close();
   else existing?.remove();
 
-  // 1. THE REDIRECT JAIL (Doesn't trigger sandbox errors)
+  // 1. Redirect protection
   const preventRedirect = () => "Stay on this page?";
   window.onbeforeunload = preventRedirect;
 
-  // 2. THE POPUP KILLER (Overrides the window.open command)
+  // 2. Kill popups
   const originalOpen = window.open;
   window.open = function() { return null; }; 
 
@@ -45,16 +45,16 @@ export function openPlayer(src, progressKey) {
   iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
   iframe.setAttribute('frameborder', '0');
   
-  // REMOVED SANDBOX ATTRIBUTE TO BYPASS DETECTION
+  // No sandbox = No "Sandbox Detected" error
   iframe.src = src;
 
-  // 3. THE AD-SHIELD (EATS THE FIRST CLICK)
+  // 3. REVISED AD-SHIELD
+  // Instead of staying there, we make it disappear the SECOND you touch it
   const adShield = mk('div', 'ad-shield');
   adShield.setAttribute('style', 'position:absolute; inset:0; z-index:10; cursor:pointer; background: transparent;');
   
-  adShield.onclick = (e) => {
-    e.stopPropagation();
-    adShield.remove();
+  adShield.onmousedown = () => {
+    adShield.remove(); // Removes immediately on mouse down
     iframe.focus();
   };
 
@@ -72,9 +72,6 @@ export function openPlayer(src, progressKey) {
       if (!document.fullscreenElement) overlay.requestFullscreen().catch(() => {});
       else document.exitFullscreen();
     }
-    if (e.code === 'Space') {
-        iframe.focus();
-    }
   };
 
   const close = (e) => {
@@ -82,24 +79,16 @@ export function openPlayer(src, progressKey) {
     cleanup();
     iframe.src = '';
     overlay.remove();
-    
-    // RESTORE BROWSER FUNCTIONS
     window.onbeforeunload = null;
     window.open = originalOpen; 
-    
     document.removeEventListener('keydown', onKey);
-    window.removeEventListener('blur', onBlur);
   };
-
-  const onBlur = () => setTimeout(() => window.focus(), 10);
-  window.addEventListener('blur', onBlur);
 
   overlay._close = close;
   closeBtn.onclick = close;
   document.addEventListener('keydown', onKey);
 }
 
-// ... Rest of the file (openMoviePlayer, openEpisodePlayer, openLivePlayer) stays the same
 export function openMoviePlayer(item) {
   history.add(item, 'movie');
   const key = `movie_${item.id}`;
